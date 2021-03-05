@@ -1,41 +1,37 @@
 <?php
 
-    $conexao = mysqli_connect('localhost', 'root', '', 'salvaCEP');
+$conexao = mysqli_connect('localhost', 'root', '', 'viacep') or die(mysqli_error());
 
-    //CEP informado pelo usuário//
-    $cep = $_POST['cep'];
+//CEP informado pelo usuário//
+$cep = $_POST['cep'];
 
+//vamos consulta primeiro a nossa base em busca do cep informado
+$resultado = mysqli_query($conexao, "SELECT * FROM cep WHERE cep = {$cep}");
 
-    //vamos consulta primeiro a nossa base em busca do cep informado
-	$query = "SELECT * FROM tb_cep WHERE cep = $cep";
- 
-    $resultado = mysqli_query($conexao, $query);
+if (mysqli_num_rows($resultado) >= 1) {
+    while ($linha = mysqli_fetch_array($resultado)) {
+        echo "<pre>";
+        var_dump($linha['id']);
+        var_dump($linha['cep']);
+        var_dump($linha['logradouro']);
+    }
+} else {
+    //Pesquisando via WEB, endereço completo a partir do CEP//
+    $url = "https://viacep.com.br/ws/{$cep}/xml/";
 
-    var_dump($query);
- 
-   /*else{
+    //Transforma String em Objeto///
+    $xml = simplexml_load_file($url);
 
-        //Pesquisando via WEB, endereço completo a partir do CEP//
-        $url = "https://viacep.com.br/ws/".$cep."/xml/";
+    //Dados a serem inseridos//
+    $logradouro = $xml->logradouro;
+    $bairro = $xml->bairro;
+    $localidade = $xml->localidade;
+    $uf = $xml->uf;
 
-            //Transforma String em Objeto///
-            $xml = simplexml_load_file($url);
+    //INSERIR NO BANCO DE DADOS//
+    $query = "INSERT INTO cep (cep, logradouro, bairro, localidade, uf) VALUES ('{$cep}', '$logradouro', '{$bairro}', '{$localidade}', '{$uf}')";
 
-        //Dados a serem inseridos//
-        $logradouro = $xml->logradouro;
-        $bairro = $xml->bairro;
-        $localidade = $xml->localidade;
-        $uf = $xml->uf;
+    $update = mysqli_query($conexao, $query);
 
-        
-        //INSERIR NO BANCO DE DADOS//
-        $query = "insert into tb_cep (cep, logradouro, bairro, localidade, uf) values ('{$cep}', '{$logradouro}', '{$bairro}', '{$localidade}', '{$uf}')";
-
-        $conexao = mysqli_connect('localhost', 'root', '', 'salvaCEP');
-        mysqli_query($conexao, $query);
-        mysqli_close($conexao);
-
-        echo $logradouro."<br>",$bairro."<br>", $localidade."<br>", $uf;
-    }*/
-
-?>
+    echo $logradouro . "<br>", $bairro . "<br>", $localidade . "<br>", $uf;
+}
